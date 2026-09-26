@@ -15,6 +15,17 @@ export default function ListingCard({ listing, active, onHover }) {
       }`}
     >
       <div className="space-y-3">
+        <div className="relative">
+          <img
+            src={`/photos/${listing.id}.jpg`}
+            alt={`Sample photo for ${listing.name}`}
+            className="h-36 w-full rounded-xl object-cover"
+            loading="lazy"
+          />
+          <span className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+            Sample photo
+          </span>
+        </div>
         <div className="flex items-start justify-between gap-2">
           <div>
             {reviewCount > 0 && (
