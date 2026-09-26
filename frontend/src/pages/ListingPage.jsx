@@ -81,6 +81,16 @@ export default function ListingPage() {
 
       {/* Main Card */}
       <div className="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-md backdrop-blur-md space-y-6">
+        <div className="relative">
+          <img
+            src={`/photos/${listing.id}.jpg`}
+            alt={`Sample photo for ${listing.name}`}
+            className="h-64 w-full rounded-2xl object-cover"
+          />
+          <span className="absolute bottom-3 left-3 rounded bg-black/60 px-2 py-1 text-xs font-semibold text-white">
+            Sample photo · not the actual unit
+          </span>
+        </div>
 
         {/* Title Header */}
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-6">
