@@ -1,15 +1,20 @@
 """Seed 20 FICTIONAL listings near CSUEB (Hayward, CA) with reviews.
-Run: python seed.py            (resets the database)
-     python seed.py --summaries (also pre-generates AI summaries so the demo is instant)
+Run: python seed.py            (resets the database, no Gemini calls)
+     python seed.py --summaries (also generates missing AI summaries and saves them to summaries.json)
 """
+import json
 import math
+import os
 import random
 import sys
+import time
 from datetime import datetime, timedelta
 
 from database import Base, engine, SessionLocal
 from models import Listing, Review
-from ai import summarize_reviews
+from ai import gemini_summary, _fallback_summary
+
+CACHE_FILE = os.path.join(os.path.dirname(__file__), "summaries.json")
 
 random.seed(42)  # same data every run
 
@@ -84,16 +89,32 @@ def seed(with_summaries=False):
 
         quality = random.random()
         for _ in range(random.randint(0 if i == len(NAMES) - 1 else 2, 6)):  # last one has 0 reviews
-            when = datetime.utcnow() - timedelta(days=random.randint(5, 400))
+            when = datetime.now() - timedelta(days=random.randint(5, 400))
             db.add(make_review(listing.id, quality, when))
 
     db.commit()
 
-    if with_summaries:
-        for l in db.query(Listing).all():
-            l.ai_summary = summarize_reviews(l, l.reviews)
-            print(f"  summary for {l.name}: {l.ai_summary}")
-        db.commit()
+    # AI summaries: reuse saved ones from summaries.json so Gemini is only called once per listing, ever.
+    cache = json.load(open(CACHE_FILE)) if os.path.exists(CACHE_FILE) else {}
+    for l in db.query(Listing).all():
+        if l.name in cache:
+            l.ai_summary = cache[l.name]
+        elif with_summaries and l.reviews:
+            text = gemini_summary(l, l.reviews)
+            if text:
+                cache[l.name] = text
+                l.ai_summary = text
+                json.dump(cache, open(CACHE_FILE, "w"), indent=2)
+            else:
+                l.ai_summary = _fallback_summary(l.reviews)  # not cached, retried next run
+            time.sleep(13)  # free tier: 5 requests/min
+        elif l.reviews:
+            l.ai_summary = _fallback_summary(l.reviews)  # no API call
+        else:
+            l.ai_summary = "No reviews yet. Be the first to share your experience."
+        print(f"  {l.name}: {l.ai_summary[:70]}")
+    db.commit()
+    print(f"{len(cache)} AI summaries saved in summaries.json")
 
     print(f"Seeded {db.query(Listing).count()} listings and {db.query(Review).count()} reviews.")
     db.close()

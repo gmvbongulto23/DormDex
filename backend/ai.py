@@ -1,8 +1,12 @@
 """AI review summaries with Gemini. Falls back to a rule-based summary if no key or the call fails,
 so the demo never breaks."""
 import os
+import time
+from dotenv import load_dotenv
 
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+load_dotenv()  # reads backend/.env
+
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
 
 def _fallback_summary(reviews) -> str:
@@ -20,10 +24,14 @@ def _fallback_summary(reviews) -> str:
 def summarize_reviews(listing, reviews) -> str:
     if not reviews:
         return "No reviews yet. Be the first to share your experience."
+    return gemini_summary(listing, reviews) or _fallback_summary(reviews)
 
+
+def gemini_summary(listing, reviews):
+    """Returns Gemini's summary, or None if there's no key or the call fails."""
     api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return _fallback_summary(reviews)
+    if not api_key or not reviews:
+        return None
 
     try:
         from google import genai
@@ -37,9 +45,16 @@ def summarize_reviews(listing, reviews) -> str:
             "maintenance, and any cost or safety patterns. Only use facts in the reviews. No preamble.\n\n"
             f"Reviews:\n{review_text}"
         )
-        resp = client.models.generate_content(model=MODEL, contents=prompt)
-        text = (resp.text or "").strip()
-        return text or _fallback_summary(reviews)
+        for attempt in range(3):
+            try:
+                resp = client.models.generate_content(model=MODEL, contents=prompt)
+                break
+            except Exception as e:
+                if "503" in str(e) and attempt < 2:
+                    time.sleep(2 * (attempt + 1))  # wait 2s, then 4s
+                    continue
+                raise
+        return (resp.text or "").strip() or None
     except Exception as e:  # network, quota, bad key
-        print(f"[ai] Gemini failed, using fallback: {e}")
-        return _fallback_summary(reviews)
+        print(f"[ai] Gemini failed, using fallback: {str(e)[:120]}")
+        return None
