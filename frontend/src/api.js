@@ -1,200 +1,139 @@
-// LocalStorage Keys
-const MOCK_STORAGE_KEY = 'app_mock_listings'
-const MOCK_DETAILS_KEY = 'app_mock_details'
+import { mockListings as seedListings, mockDetails as seedDetails } from './mockData'
 
-export const USING_MOCK = true
+// Real backend when VITE_API_URL is set (frontend/.env locally, Vercel env var in production).
+// Without it, the app falls back to mock data saved in this browser.
+const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
+export const USING_MOCK = !API_URL
 
-// Default mock listings with lat/lng coordinates
-const defaultListings = [
-  { 
-    id: '1', 
-    name: 'Campus Heights Apartments', 
-    true_cost: 1150, 
-    rent: 1050, 
-    avg_utilities: 100, 
-    distance_miles: 0.4, 
-    safety_score: 4.8, 
-    avg_rating: 4.6, 
-    review_count: 5, 
-    ai_summary: 'Overall a very popular choice among students due to close proximity to campus.',
-    lat: 37.6580,
-    lng: -122.0590
-  },
-  { 
-    id: '2', 
-    name: 'University Village Suites', 
-    true_cost: 1350, 
-    rent: 1200, 
-    avg_utilities: 150, 
-    distance_miles: 1.2, 
-    safety_score: 4.2, 
-    avg_rating: 4.1, 
-    review_count: 3, 
-    ai_summary: 'Spacious floorplans with great natural light.',
-    lat: 37.6520,
-    lng: -122.0680
+// ---------- Real API ----------
+async function request(path, options = {}) {
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    // FastAPI errors: detail is a string ("Wrong code...") or a list of validation errors
+    const msg = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail
+    throw new Error((msg || 'Something went wrong').replace(/^Value error, /, ''))
   }
-]
-
-const defaultDetails = {
-  '1': {
-    id: '1',
-    name: 'Campus Heights Apartments',
-    true_cost: 1150,
-    rent: 1050,
-    avg_utilities: 100,
-    distance_miles: 0.4,
-    safety_score: 4.8,
-    avg_rating: 4.6,
-    review_count: 5,
-    ai_summary: null,
-    lat: 37.6580,
-    lng: -122.0590,
-    reviews: [
-      { id: 'r1', text: 'Clean water pressure, electricity averages around $100/mo split between roommates.', overall_rating: 5, created_at: '2026-02-10' },
-      { id: 'r2', text: 'Super easy 5 minute walk to class. Landlord responds fast.', overall_rating: 4, created_at: '2026-03-01' }
-    ]
-  },
-  '2': {
-    id: '2',
-    name: 'University Village Suites',
-    true_cost: 1350,
-    rent: 1200,
-    avg_utilities: 150,
-    distance_miles: 1.2,
-    safety_score: 4.2,
-    avg_rating: 4.1,
-    review_count: 3,
-    ai_summary: 'Spacious units with modern kitchen amenities.',
-    lat: 37.6520,
-    lng: -122.0680,
-    reviews: [
-      { id: 'r3', text: 'A bit pricier, but quiet during midterms.', overall_rating: 4, created_at: '2026-01-15' }
-    ]
-  }
+  return data
 }
+
+// ---------- Mock fallback (localStorage) ----------
+const MOCK_LISTINGS_KEY = 'dormdex_mock_listings_v2'
+const MOCK_DETAILS_KEY = 'dormdex_mock_details_v2'
+const DEMO_CODE = '123456'
 
 function loadState(key, fallback) {
   try {
     const saved = localStorage.getItem(key)
-    return saved ? JSON.parse(saved) : fallback
-  } catch (e) {
-    return fallback
+    return saved ? JSON.parse(saved) : structuredClone(fallback)
+  } catch {
+    return structuredClone(fallback)
   }
 }
 
 function saveState(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value))
-  } catch (e) {
-    console.error('Failed to save state to localStorage', e)
+  } catch {
+    // storage blocked (private mode): changes just won't survive a reload
   }
 }
 
-let mockListings = loadState(MOCK_STORAGE_KEY, defaultListings)
-let mockDetails = loadState(MOCK_DETAILS_KEY, defaultDetails)
-
-// Pending review buffer for 2-step verification mock
+let mockListings = loadState(MOCK_LISTINGS_KEY, seedListings)
+let mockDetails = loadState(MOCK_DETAILS_KEY, seedDetails)
 const pendingReviews = {}
 
-export async function getListings(params = {}) {
-  let list = [...mockListings]
+const median = (nums) => {
+  const s = [...nums].sort((a, b) => a - b)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+}
+const avgOf = (reviews, field) =>
+  reviews.length ? Number((reviews.reduce((sum, r) => sum + Number(r[field]), 0) / reviews.length).toFixed(1)) : null
 
-  // Filter params
-  if (params.max_cost) list = list.filter(item => item.true_cost <= Number(params.max_cost))
-  if (params.min_safety) list = list.filter(item => item.safety_score >= Number(params.min_safety))
+function recompute(detail) {
+  const reviews = detail.reviews || []
+  const utils = median(reviews.map((r) => Number(r.monthly_utilities)))
+  detail.review_count = reviews.length
+  detail.avg_utilities = reviews.length ? Math.round(utils) : null
+  detail.utilities_reported = reviews.length > 0
+  detail.true_cost = detail.rent + (detail.avg_utilities || 0)
+  detail.avg_rating = avgOf(reviews, 'overall_rating')
+  detail.avg_landlord_rating = avgOf(reviews, 'landlord_rating')
+  detail.avg_maintenance_rating = avgOf(reviews, 'maintenance_rating')
+  detail.avg_safety_rating = avgOf(reviews, 'safety_rating')
+}
 
-  // Sort matching backend criteria
-  const sort = params.sort || 'true_cost'
-  if (sort === 'true_cost') list.sort((a, b) => a.true_cost - b.true_cost)
-  if (sort === 'safety') list.sort((a, b) => b.safety_score - a.safety_score)
-  if (sort === 'rating') list.sort((a, b) => b.avg_rating - a.avg_rating)
-  if (sort === 'distance') list.sort((a, b) => a.distance_miles - b.distance_miles)
+const SORTS = {
+  true_cost: (a, b) => a.true_cost - b.true_cost,
+  safety: (a, b) => b.safety_score - a.safety_score,
+  rating: (a, b) => (b.avg_rating || 0) - (a.avg_rating || 0),
+  distance: (a, b) => a.distance_miles - b.distance_miles,
+}
 
-  return list
+// ---------- Exported functions (same shapes in both modes) ----------
+export async function getListings(filters = {}) {
+  if (!USING_MOCK) {
+    const params = new URLSearchParams(
+      Object.entries(filters).filter(([, v]) => v !== '' && v != null)
+    )
+    return request(`/listings?${params}`)
+  }
+  return mockListings
+    .filter((l) => !filters.max_cost || l.true_cost <= Number(filters.max_cost))
+    .filter((l) => !filters.min_safety || l.safety_score >= Number(filters.min_safety))
+    .filter((l) => filters.bedrooms === '' || filters.bedrooms == null || l.bedrooms === Number(filters.bedrooms))
+    .sort(SORTS[filters.sort] || SORTS.true_cost)
 }
 
 export async function getListing(id) {
-  const item = mockDetails[id] || mockListings.find(l => String(l.id) === String(id))
-  if (!item) throw new Error('Listing not found')
-  return item
+  if (!USING_MOCK) return request(`/listings/${id}`)
+  const detail = mockDetails[id]
+  if (!detail) throw new Error('Listing not found')
+  return detail
 }
 
 export async function getSummary(id) {
-  const listing = mockDetails[id]
-  const summaryText = listing?.ai_summary || 'AI Summary: Quiet environment with low noise complaints and walkable access to campus facilities.'
-  if (mockDetails[id]) {
-    mockDetails[id].ai_summary = summaryText
-    saveState(MOCK_DETAILS_KEY, mockDetails)
+  if (!USING_MOCK) return request(`/listings/${id}/summary`)
+  return { listing_id: id, ai_summary: mockDetails[id]?.ai_summary || 'No reviews yet. Be the first to share your experience.' }
+}
+
+// Step 1: returns { review_id, status: 'pending', email_mode, demo_code? }
+export async function postReview(listingId, review) {
+  if (!USING_MOCK) {
+    return request(`/listings/${listingId}/reviews`, { method: 'POST', body: JSON.stringify(review) })
   }
-  return { summary: summaryText }
+  const domain = review.email.toLowerCase().split('@')[1] || ''
+  if (!(domain === 'csueastbay.edu' || domain.endsWith('.csueastbay.edu'))) {
+    throw new Error('Please use your school email (csueastbay.edu)')
+  }
+  const reviewId = `mock_${Date.now()}`
+  pendingReviews[reviewId] = { listingId: String(listingId), review }
+  return { review_id: reviewId, status: 'pending', email_mode: 'demo', demo_code: DEMO_CODE }
 }
 
-export async function postReview(listingId, data) {
-  const reviewId = 'rev_' + Date.now()
-  pendingReviews[reviewId] = { listingId, data }
-  return { review_id: reviewId, status: 'pending', demo_code: '123456' }
-}
-
+// Step 2: returns { review, listing }
 export async function verifyReview(reviewId, code) {
-  if (code !== '123456') {
-    throw new Error('Invalid verification code. Please try again or check demo code.')
+  if (!USING_MOCK) {
+    return request(`/reviews/${reviewId}/verify`, { method: 'POST', body: JSON.stringify({ code }) })
   }
-
   const pending = pendingReviews[reviewId]
-  if (!pending) throw new Error('Review session expired or invalid ID.')
+  if (!pending) throw new Error('This code expired. Please submit your review again.')
+  if (code !== DEMO_CODE) throw new Error('Wrong code. Please try again.')
 
-  const { listingId, data } = pending
-  const targetDetail = mockDetails[listingId] || {
-    id: listingId,
-    name: 'Property ' + listingId,
-    true_cost: 1200,
-    rent: 1000,
-    avg_utilities: Number(data.monthly_utilities) || 100,
-    distance_miles: 0.5,
-    safety_score: Number(data.safety_rating) || 4.0,
-    avg_rating: Number(data.overall_rating) || 4.0,
-    review_count: 0,
-    ai_summary: null,
-    lat: 37.6550,
-    lng: -122.0620,
-    reviews: []
-  }
+  const detail = mockDetails[pending.listingId]
+  const newReview = { ...pending.review, id: reviewId, created_at: new Date().toISOString(), verified: true }
+  delete newReview.email // never shown, same as the backend
+  detail.reviews = [newReview, ...(detail.reviews || [])]
+  recompute(detail)
 
-  // Add review
-  const newReview = {
-    id: reviewId,
-    text: data.text,
-    overall_rating: Number(data.overall_rating),
-    created_at: new Date().toISOString().split('T')[0]
-  }
-  targetDetail.reviews = [newReview, ...(targetDetail.reviews || [])]
-
-  // Recompute aggregates
-  const utilsList = [Number(data.monthly_utilities)].filter(Boolean)
-  const sortedUtils = [...utilsList].sort((a, b) => a - b)
-  const medianUtils = sortedUtils.length ? sortedUtils[Math.floor(sortedUtils.length / 2)] : targetDetail.avg_utilities
-  
-  targetDetail.review_count = targetDetail.reviews.length
-  targetDetail.avg_utilities = medianUtils
-  targetDetail.true_cost = (targetDetail.rent || 1000) + medianUtils
-
-  const ratingsSum = targetDetail.reviews.reduce((acc, r) => acc + (r.overall_rating || 0), 0)
-  targetDetail.avg_rating = Number((ratingsSum / targetDetail.review_count).toFixed(1))
-
-  mockDetails[listingId] = targetDetail
-  
-  // Sync to mockListings array
-  const index = mockListings.findIndex(l => String(l.id) === String(listingId))
-  if (index !== -1) {
-    mockListings[index] = { ...mockListings[index], ...targetDetail }
-  } else {
-    mockListings.push(targetDetail)
-  }
-
+  const { reviews, ai_summary, ...summary } = detail
+  mockListings = mockListings.map((l) => (String(l.id) === pending.listingId ? { ...l, ...summary } : l))
   saveState(MOCK_DETAILS_KEY, mockDetails)
-  saveState(MOCK_STORAGE_KEY, mockListings)
-
+  saveState(MOCK_LISTINGS_KEY, mockListings)
   delete pendingReviews[reviewId]
-  return { status: 'verified', listing_id: listingId }
+  return { review: newReview, listing: summary }
 }

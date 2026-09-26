@@ -37,9 +37,9 @@ export default function LandlordRating({
       </div>
 
       <div className="mt-4 space-y-3">
-        {renderMetric('🔧 Maintenance Response Speed', maintenanceScore)}
-        {renderMetric('💵 Deposit Return Fairness', depositFairness)}
-        {renderMetric('🤫 Wall Insulation & Quietness', noiseScore)}
+        {renderMetric('🧑‍💼 Landlord Rating', depositFairness)}
+        {renderMetric('🔧 Maintenance', maintenanceScore)}
+        {renderMetric('🛡️ Resident Safety Rating', noiseScore)}
       </div>
     </div>
   )

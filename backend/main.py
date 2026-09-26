@@ -79,6 +79,7 @@ def listing_stats(l: Listing) -> dict:
     n = len(reviews)
     avg_util = round(sum(r.monthly_utilities for r in reviews) / n) if n else None
     avg_rating = round(sum(r.overall_rating for r in reviews) / n, 1) if n else None
+    avg = lambda field: round(sum(getattr(r, field) for r in reviews) / n, 1) if n else None
     return {
         "id": l.id,
         "name": l.name,
@@ -95,6 +96,10 @@ def listing_stats(l: Listing) -> dict:
         "utilities_reported": n > 0,
         "avg_rating": avg_rating,
         "review_count": n,
+        # Real averages from verified reviews (1-5), for the landlord scorecard
+        "avg_landlord_rating": avg("landlord_rating"),
+        "avg_maintenance_rating": avg("maintenance_rating"),
+        "avg_safety_rating": avg("safety_rating"),
     }
 
 
