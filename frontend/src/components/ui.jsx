@@ -1,27 +1,28 @@
-export const money = (n) => `$${Number(n).toLocaleString()}`
+import React from 'react'
 
-export function Stars({ value, label = 'rating' }) {
-  if (value == null) return <span className="text-sm text-slate-500">No ratings yet</span>
-  const full = Math.round(value)
-  return (
-    <span className="inline-flex items-center gap-1" aria-label={`${value} out of 5 ${label}`}>
-      <span aria-hidden="true" className="text-amber-500">
-        {'★'.repeat(full)}<span className="text-slate-300">{'★'.repeat(5 - full)}</span>
+export function money(val) {
+  if (val === undefined || val === null) return '$0'
+  return `$${Math.round(val).toLocaleString()}`
+}
+
+export function Stars({ value = 0 }) {
+  const stars = []
+  for (let i = 1; i <= 5; i++) {
+    stars.push(
+      <span key={i} className={i <= Math.round(value) ? 'text-amber-400' : 'text-slate-200'}>
+        ★
       </span>
-      <span className="text-sm font-medium">{value}</span>
-    </span>
-  )
+    )
+  }
+  return <div className="inline-flex text-sm">{stars}</div>
 }
 
 export function SafetyBadge({ score }) {
-  const [bg, word] =
-    score >= 7.5 ? ['bg-emerald-100 text-emerald-800', 'Safer']
-    : score >= 5.5 ? ['bg-amber-100 text-amber-800', 'Mixed']
-    : ['bg-rose-100 text-rose-800', 'Use caution']
-  // Word + number, never color alone
+  if (!score) return null
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${bg}`}>
-      Safety {score}/10 · {word}
+    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+      🛡️ Safety: <strong className="font-extrabold">{score}</strong>
+      <span className="text-[10px] uppercase font-normal text-blue-500">(demo score)</span>
     </span>
   )
 }

@@ -1,220 +1,262 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { getListings, postReview, verifyReview } from '../api'
 
-export default function SubmitPage() {
+export default function SubmitReviewPage() {
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const [submitted, setSubmitted] = useState(false)
+
+  const [listings, setListings] = useState([])
+  const [selectedListing, setSelectedListing] = useState(searchParams.get('listing') || '')
+  
+  // Step & Verification State
+  const [step, setStep] = useState(1)
+  const [reviewId, setReviewId] = useState(null)
+  const [demoCode, setDemoCode] = useState('')
+  const [verificationCode, setVerificationCode] = useState('')
+
+  // Backend exact payload state
   const [formData, setFormData] = useState({
-    propertyName: '',
-    campus: 'csueb',
-    bedrooms: '1',
-    baseRent: '',
-    avgUtilities: '',
-    transitMode: '🚶 Walk (under 10 min)',
-    terrain: '♿ Flat / Accessible Route',
-    safetyScore: '4',
-    overallRating: '5',
-    landlordName: '',
-    reviewText: ''
+    email: '',
+    overall_rating: 5,
+    landlord_rating: 4,
+    maintenance_rating: 4,
+    safety_rating: 4,
+    monthly_utilities: 100,
+    text: '',
+    transit: 'Walk',
+    terrain: 'Flat'
   })
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  useEffect(() => {
+    getListings()
+      .then((data) => {
+        setListings(data)
+        if (!selectedListing && data.length > 0) {
+          setSelectedListing(data[0].id)
+        }
+      })
+      .catch((err) => console.error(err))
+  }, [])
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  // Step 1: Submit review to get verification code
+  const handleSubmitStep1 = async (e) => {
     e.preventDefault()
-    // Simulate submission success
-    setSubmitted(true)
-    setTimeout(() => {
-      navigate('/')
-    }, 2000)
+    setErrorMessage('')
+    setLoading(true)
+
+    try {
+      const payload = {
+        email: formData.email,
+        overall_rating: Number(formData.overall_rating),
+        landlord_rating: Number(formData.landlord_rating),
+        maintenance_rating: Number(formData.maintenance_rating),
+        safety_rating: Number(formData.safety_rating),
+        monthly_utilities: Number(formData.monthly_utilities),
+        text: formData.text
+      }
+
+      const res = await postReview(selectedListing, payload)
+      setReviewId(res.review_id)
+      if (res.demo_code) setDemoCode(res.demo_code)
+      setStep(2)
+    } catch (err) {
+      setErrorMessage(err.message || 'Submission failed. Make sure to use a valid student email.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Step 2: Verify 6-digit code
+  const handleVerifyStep2 = async (e) => {
+    e.preventDefault()
+    setErrorMessage('')
+    setLoading(true)
+
+    try {
+      await verifyReview(reviewId, verificationCode.trim())
+      navigate(`/listing/${selectedListing}`)
+    } catch (err) {
+      setErrorMessage(err.message || 'Verification failed. Wrong code or expired.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-6">
-      {/* Back Navigation */}
-      <Link
-        to="/"
-        className="inline-flex items-center gap-1 text-xs font-bold text-violet-700 hover:text-violet-900 transition mb-4"
-      >
-        ← Back to Listings
-      </Link>
+    <div className="mx-auto max-w-xl p-6">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
+        <h1 className="text-2xl font-black text-slate-900">Submit a Verified Housing Review</h1>
 
-      <div className="rounded-3xl border border-slate-200/80 bg-white/95 p-6 md:p-8 shadow-lg backdrop-blur-md">
-        
-        {/* Header */}
-        <div className="border-b border-slate-100 pb-4 mb-6">
-          <span className="rounded-full bg-violet-100 px-3 py-1 text-[11px] font-extrabold text-violet-800">
-            Peer Housing Intelligence
-          </span>
-          <h1 className="mt-2 text-2xl font-black text-slate-900">Submit Property & Utility Review</h1>
-          <p className="text-xs font-medium text-slate-500">
-            Help fellow students know the true monthly cost and commute before signing a lease.
-          </p>
-        </div>
-
-        {submitted ? (
-          <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-8 text-center space-y-2">
-            <span className="text-4xl">🎉</span>
-            <h2 className="text-xl font-black text-emerald-900">Review Submitted!</h2>
-            <p className="text-xs font-semibold text-emerald-700">
-              Thank you for contributing to your campus housing community. Redirecting to homepage...
-            </p>
+        {/* Global Error Alert Box */}
+        {errorMessage && (
+          <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800 font-medium">
+            ⚠️ {errorMessage}
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            
-            {/* Campus & Property Name */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Target Campus</label>
-                <select
-                  value={formData.campus}
-                  onChange={(e) => setFormData({ ...formData, campus: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400"
-                >
-                  <option value="csueb">CSU East Bay</option>
-                  <option value="sjsu">San Jose State</option>
-                  <option value="ucb">UC Berkeley</option>
-                  <option value="sfsu">SF State</option>
-                  <option value="scu">Santa Clara University</option>
-                  <option value="ucd">UC Davis</option>
-                </select>
-              </div>
+        )}
 
+        {step === 1 ? (
+          <form onSubmit={handleSubmitStep1} className="space-y-4 text-xs font-semibold text-slate-700">
+            {/* Listing Selection Dropdown */}
+            <div className="space-y-1">
+              <label className="block">Select Property</label>
+              <select
+                value={selectedListing}
+                onChange={(e) => setSelectedListing(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 p-2.5 text-xs bg-slate-50 font-medium focus:ring-2 focus:ring-violet-500"
+                required
+              >
+                {listings.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* School Email */}
+            <div className="space-y-1">
+              <label className="block">Campus Email (.edu / campus email)</label>
+              <input
+                type="email"
+                name="email"
+                required
+                placeholder="student@csueastbay.edu"
+                value={formData.email}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-slate-200 p-2.5 text-xs bg-slate-50"
+              />
+            </div>
+
+            {/* Monthly Utilities */}
+            <div className="space-y-1">
+              <label className="block">Actual Average Monthly Utilities ($)</label>
+              <input
+                type="number"
+                name="monthly_utilities"
+                required
+                min="0"
+                value={formData.monthly_utilities}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-slate-200 p-2.5 text-xs bg-slate-50"
+              />
+            </div>
+
+            {/* Ratings Grid */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Property or Building Name</label>
+                <label className="block mb-1">Overall Rating (1–5)</label>
                 <input
-                  type="text"
-                  required
-                  placeholder="e.g. University Terrace Apartments"
-                  value={formData.propertyName}
-                  onChange={(e) => setFormData({ ...formData, propertyName: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400"
-                />
-              </div>
-            </div>
-
-            {/* Financials: Rent & Utilities */}
-            <div className="rounded-2xl border border-amber-200/70 bg-amber-50/40 p-4 space-y-3">
-              <h3 className="text-xs font-extrabold uppercase text-amber-900 tracking-wide">Monthly Cost Breakdown</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Bedrooms</label>
-                  <select
-                    value={formData.bedrooms}
-                    onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs font-semibold"
-                  >
-                    <option value="0">Studio</option>
-                    <option value="1">1 Bed</option>
-                    <option value="2">2 Bed</option>
-                    <option value="3">3+ Bed</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Base Monthly Rent ($)</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="1850"
-                    value={formData.baseRent}
-                    onChange={(e) => setFormData({ ...formData, baseRent: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs font-semibold text-slate-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-amber-900 mb-1">Avg Utilities ($/mo)</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="120"
-                    value={formData.avgUtilities}
-                    onChange={(e) => setFormData({ ...formData, avgUtilities: e.target.value })}
-                    className="w-full rounded-xl border border-amber-300 bg-white p-2 text-xs font-semibold text-amber-900"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Transit & Accessibility */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Best Transit Option to Campus</label>
-                <select
-                  value={formData.transitMode}
-                  onChange={(e) => setFormData({ ...formData, transitMode: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-semibold text-slate-800"
-                >
-                  <option value="🚶 Walk (under 10 min)">🚶 Walk (under 10 min)</option>
-                  <option value="🚌 Campus Shuttle (5-10 min)">🚌 Campus Shuttle (5-10 min)</option>
-                  <option value="🚲 Bike / Scooter (5-15 min)">🚲 Bike / Scooter (5-15 min)</option>
-                  <option value="🚆 BART / Bus Line">🚆 BART / Bus Line</option>
-                  <option value="🚗 Drive / Carpool">🚗 Drive / Carpool</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Terrain & Route Safety</label>
-                <select
-                  value={formData.terrain}
-                  onChange={(e) => setFormData({ ...formData, terrain: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-semibold text-slate-800"
-                >
-                  <option value="♿ Flat / Accessible Route">♿ Flat / Accessible Route</option>
-                  <option value="⛰️ Uphill Walk">⛰️ Uphill Walk</option>
-                  <option value="🚲 Dedicated Bike Lane">🚲 Dedicated Bike Lane</option>
-                  <option value="🌙 Well-Lit Street">🌙 Well-Lit Street</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Ratings & Landlord Info */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Landlord / Management Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Bay Management LLC"
-                  value={formData.landlordName}
-                  onChange={(e) => setFormData({ ...formData, landlordName: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800"
+                  type="number"
+                  name="overall_rating"
+                  min="1"
+                  max="5"
+                  value={formData.overall_rating}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-slate-50"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Neighborhood Safety Score (1-5)</label>
-                <select
-                  value={formData.safetyScore}
-                  onChange={(e) => setFormData({ ...formData, safetyScore: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs font-semibold"
-                >
-                  <option value="5">🛡️ 5/5 - Very Safe</option>
-                  <option value="4">🛡️ 4/5 - Moderate / Safe</option>
-                  <option value="3">🛡️ 3/5 - Average</option>
-                  <option value="2">⚠️ 2/5 - Caution Needed</option>
-                </select>
+                <label className="block mb-1">Landlord Rating (1–5)</label>
+                <input
+                  type="number"
+                  name="landlord_rating"
+                  min="1"
+                  max="5"
+                  value={formData.landlord_rating}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-slate-50"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1">Maintenance (1–5)</label>
+                <input
+                  type="number"
+                  name="maintenance_rating"
+                  min="1"
+                  max="5"
+                  value={formData.maintenance_rating}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-slate-50"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1">Safety Rating (1–5)</label>
+                <input
+                  type="number"
+                  name="safety_rating"
+                  min="1"
+                  max="5"
+                  value={formData.safety_rating}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-200 p-2 text-xs bg-slate-50"
+                />
               </div>
             </div>
 
             {/* Written Review */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Student Review / Utility Advice</label>
+            <div className="space-y-1 pt-2">
+              <label className="block">Review Details</label>
               <textarea
+                name="text"
                 rows="3"
                 required
-                placeholder="Share advice about water pressure, noise levels, internet reliability, or seasonal heating/cooling bills..."
-                value={formData.reviewText}
-                onChange={(e) => setFormData({ ...formData, reviewText: e.target.value })}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                placeholder="Share your experience with water pressure, internet, landlord response times..."
+                value={formData.text}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-slate-200 p-2.5 text-xs bg-slate-50"
               />
             </div>
 
-            {/* Submit CTA */}
             <button
               type="submit"
-              className="w-full rounded-xl bg-violet-600 py-3 text-xs font-extrabold text-white shadow-md shadow-violet-200 hover:bg-violet-700 transition active:scale-[0.98]"
+              disabled={loading}
+              className="w-full rounded-xl bg-violet-600 py-3 text-xs font-bold text-white shadow-sm hover:bg-violet-700 transition"
             >
-              Post Review to Campus Feed
+              {loading ? 'Sending Verification...' : 'Continue to Verification →'}
+            </button>
+          </form>
+        ) : (
+          /* Step 2: Verification Code Form */
+          <form onSubmit={handleVerifyStep2} className="space-y-4 text-xs font-semibold text-slate-700">
+            <p className="text-slate-600">Enter the 6-digit code sent to your email.</p>
+
+            {demoCode && (
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-3 text-amber-900 font-bold">
+                🧪 Demo mode active! Your code is: <span className="underline text-amber-950 font-black">{demoCode}</span>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <label className="block">6-Digit Code</label>
+              <input
+                type="text"
+                required
+                maxLength="6"
+                placeholder="123456"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 p-2.5 text-center text-lg tracking-widest font-mono bg-slate-50"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition"
+            >
+              {loading ? 'Verifying...' : 'Verify & Publish Review'}
             </button>
           </form>
         )}

@@ -1,31 +1,70 @@
-export default function FilterBar({ filters, onChange }) {
-  const set = (key) => (e) => onChange({ ...filters, [key]: e.target.value })
-  const field = 'mt-1 w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm'
+import React from 'react'
+
+export default function FilterBar({ filters, onFilterChange }) {
+  const handleChange = (field, value) => {
+    onFilterChange({ ...filters, [field]: value })
+  }
 
   return (
-    <form className="grid grid-cols-3 gap-2 border-b border-slate-200 bg-white p-3" onSubmit={(e) => e.preventDefault()}>
-      <label className="text-xs font-medium text-slate-700">
-        Max monthly cost
-        <select className={field} value={filters.max_cost} onChange={set('max_cost')}>
-          <option value="">Any</option>
-          {[1600, 1800, 2000, 2400, 2800].map((v) => <option key={v} value={v}>${v.toLocaleString()}</option>)}
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* 1. Max True Cost */}
+      <div>
+        <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">Max Cost</label>
+        <select
+          value={filters.max_cost}
+          onChange={(e) => handleChange('max_cost', e.target.value)}
+          className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs font-medium text-slate-700 focus:ring-2 focus:ring-violet-500"
+        >
+          <option value="">Any Cost</option>
+          <option value="1000">Under $1,000</option>
+          <option value="1250">Under $1,250</option>
+          <option value="1500">Under $1,500</option>
         </select>
-      </label>
-      <label className="text-xs font-medium text-slate-700">
-        Min safety
-        <select className={field} value={filters.min_safety} onChange={set('min_safety')}>
-          <option value="">Any</option>
-          {[5, 6, 7, 8].map((v) => <option key={v} value={v}>{v}+ / 10</option>)}
+      </div>
+
+      {/* 2. Min Safety Rating */}
+      <div>
+        <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">Min Safety</label>
+        <select
+          value={filters.min_safety}
+          onChange={(e) => handleChange('min_safety', e.target.value)}
+          className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs font-medium text-slate-700 focus:ring-2 focus:ring-violet-500"
+        >
+          <option value="">Any Rating</option>
+          <option value="4">4.0+ Stars</option>
+          <option value="4.5">4.5+ Stars</option>
         </select>
-      </label>
-      <label className="text-xs font-medium text-slate-700">
-        Bedrooms
-        <select className={field} value={filters.bedrooms} onChange={set('bedrooms')}>
-          <option value="">Any</option>
-          <option value="0">Studio</option>
-          {[1, 2, 3].map((v) => <option key={v} value={v}>{v}</option>)}
+      </div>
+
+      {/* 3. Bedrooms */}
+      <div>
+        <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">Bedrooms</label>
+        <select
+          value={filters.bedrooms}
+          onChange={(e) => handleChange('bedrooms', e.target.value)}
+          className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs font-medium text-slate-700 focus:ring-2 focus:ring-violet-500"
+        >
+          <option value="">Any Size</option>
+          <option value="1">1 Bed</option>
+          <option value="2">2 Beds</option>
+          <option value="3">3+ Beds</option>
         </select>
-      </label>
-    </form>
+      </div>
+
+      {/* 4. Sort By Dropdown */}
+      <div>
+        <label className="block text-[11px] font-extrabold uppercase text-slate-500 mb-1">Sort By</label>
+        <select
+          value={filters.sort}
+          onChange={(e) => handleChange('sort', e.target.value)}
+          className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs font-bold text-violet-700 focus:ring-2 focus:ring-violet-500"
+        >
+          <option value="true_cost">Cheapest (True Cost)</option>
+          <option value="safety">Safest (Safety Score)</option>
+          <option value="rating">Top Rated (Student Reviews)</option>
+          <option value="distance">Closest to Campus</option>
+        </select>
+      </div>
+    </div>
   )
 }

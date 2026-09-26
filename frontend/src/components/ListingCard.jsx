@@ -1,92 +1,52 @@
+import React from 'react'
 import { Link } from 'react-router-dom'
 import { money, Stars, SafetyBadge } from './ui'
 
-export default function ListingCard({ listing: l, active, onHover }) {
-  const baseRent = l.rent || Math.round(l.true_cost * 0.85)
-  const estUtilities = l.avg_utilities || (l.true_cost - baseRent)
-
-  // Transit mode logic based on distance
-  const transitMode = l.transit_mode || (
-    l.distance_miles <= 0.4 ? '🚶 Walk (8 min)' :
-    l.distance_miles <= 1.0 ? '🚌 Campus Shuttle (5 min)' :
-    l.distance_miles <= 2.5 ? '🚲 Bike / Scooter (10 min)' :
-    '🚆 BART / Bus Line (15 min)'
-  )
-
-  // Terrain / Accessibility tag
-  const terrainTag = l.terrain || (l.distance_miles > 1.2 ? '⛰️ Uphill Walk' : '♿ Flat / Accessible')
+export default function ListingCard({ listing, active, onHover }) {
+  if (!listing) return null
+  const reviewCount = listing.review_count || 0
 
   return (
-    <li>
-      <Link
-        to={`/listing/${l.id}`}
-        onMouseEnter={() => onHover?.(l.id)}
-        onFocus={() => onHover?.(l.id)}
-        className={`group block rounded-2xl border p-4 transition-all duration-200 shadow-sm ${
-          active
-            ? 'border-violet-500 bg-white ring-2 ring-violet-400/40 shadow-lg -translate-y-0.5'
-            : 'border-slate-200/80 bg-white/95 hover:border-violet-300 hover:bg-white hover:shadow-md'
-        }`}
-      >
-        {/* Header: Property Name & True Monthly Cost */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-0.5">
-            <h3 className="font-bold text-slate-900 group-hover:text-violet-700 transition-colors">
-              {l.name}
-            </h3>
-            <p className="text-xs text-slate-500">
-              {l.bedrooms === 0 ? 'Studio' : `${l.bedrooms} Bed`} • {l.distance_miles} mi from campus
-            </p>
+    <li
+      onMouseEnter={() => onHover && onHover(listing.id)}
+      onMouseLeave={() => onHover && onHover(null)}
+      className={`rounded-2xl border bg-white p-5 shadow-sm transition-all duration-200 list-none ${
+        active ? 'border-violet-500 ring-2 ring-violet-200' : 'border-slate-200/80 hover:border-slate-300'
+      }`}
+    >
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            {reviewCount > 0 && (
+              <span className="inline-block rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-800 mb-1.5">
+                ✓ {reviewCount} {reviewCount === 1 ? 'verified review' : 'verified reviews'}
+              </span>
+            )}
+            <h3 className="text-lg font-extrabold text-slate-900 leading-snug">{listing.name}</h3>
+            <p className="text-xs font-medium text-slate-500">{listing.distance_miles} miles from campus</p>
           </div>
 
-          <div className="text-right shrink-0">
-            <p className="text-xl font-black text-emerald-600">
-              {money(l.true_cost)}
-            </p>
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-              True Cost / Mo
-            </p>
+          <div className="text-right">
+            <p className="text-xl font-black text-emerald-600">{money(listing.true_cost)}</p>
+            <p className="text-[10px] font-extrabold uppercase text-slate-400">/ mo total</p>
           </div>
         </div>
 
-        {/* Cost Breakdown Pill Bar */}
-        <div className="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-1.5 border border-slate-200/60 text-[11px] text-slate-600">
-          <span>Rent: <strong className="text-slate-900">{money(baseRent)}</strong></span>
-          <span className="text-slate-300">•</span>
-          <span>Est. Utilities: <strong className="text-amber-700">{money(estUtilities)}</strong></span>
-        </div>
-
-        {/* Transportation & Terrain Badges */}
-        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-          {/* Best Transit Badge */}
-          <span className="rounded-lg bg-teal-50 border border-teal-200 px-2 py-0.5 text-[11px] font-bold text-teal-800">
-            {transitMode}
-          </span>
-
-          {/* Terrain / Accessibility Badge */}
-          <span className={`rounded-lg border px-2 py-0.5 text-[11px] font-bold ${
-            terrainTag.includes('Uphill') 
-              ? 'bg-amber-50 border-amber-200 text-amber-800' 
-              : 'bg-indigo-50 border-indigo-200 text-indigo-800'
-          }`}>
-            {terrainTag}
-          </span>
-        </div>
-
-        {/* Rating & Safety Badges */}
-        <div className="mt-2.5 flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+        <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
+          <SafetyBadge score={listing.safety_score} />
           <div className="flex items-center gap-1">
-            <Stars value={l.avg_rating} />
-            <span className="text-xs font-semibold text-slate-500">({l.review_count})</span>
+            <Stars value={listing.avg_rating || 0} />
+            <span className="font-bold text-slate-600">({reviewCount})</span>
           </div>
-
-          <SafetyBadge score={l.safety_score} />
-
-          <span className="ml-auto text-[11px] font-bold text-violet-600">
-            ✓ Student Verified
-          </span>
         </div>
-      </Link>
+
+        <Link
+          to={`/listing/${listing.id}`}
+          className="block w-full text-center rounded-xl bg-slate-100 py-2 text-xs font-bold text-slate-700 hover:bg-violet-600 hover:text-white transition"
+        >
+          View Details
+        </Link>
+      </div>
     </li>
   )
 }
