@@ -63,6 +63,7 @@ def make_review(listing_id, quality, when):
         monthly_utilities=random.randint(90, 260),
         text=f"{random.choice(pool)} {random.choice(other)}",
         created_at=when,
+        verified=True,  # seed reviews count as verified
     )
 
 
