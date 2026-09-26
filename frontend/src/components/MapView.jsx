@@ -1,40 +1,114 @@
-import { MapContainer, TileLayer, Marker, Tooltip, CircleMarker } from 'react-leaflet'
+import React from 'react'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+import { money, Stars } from './ui'
+import 'leaflet/dist/leaflet.css'
 
-const CAMPUS = [37.6566, -122.0567] // CSUEB
+// Fix Leaflet default icon path issues in React/Vite builds
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png'
+})
 
-const pin = (price, active) =>
-  L.divIcon({
-    className: '',
-    html: `<div class="price-pin ${active ? 'active' : ''}">$${Math.round(price / 100) / 10}k</div>`,
-    iconSize: [48, 22],
-    iconAnchor: [24, 11],
+// CSU East Bay Hayward Main Campus coordinates
+const CAMPUS_CENTER = [37.6580, -122.0590]
+
+// Custom Leaflet Icons for normal vs hover state
+const createCustomIcon = (isActive) => {
+  return L.divIcon({
+    className: 'custom-map-pin',
+    html: `<div style="
+      background-color: ${isActive ? '#7c3aed' : '#059669'};
+      color: white;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      border: 2px solid white;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+      transform: ${isActive ? 'scale(1.15)' : 'scale(1)'};
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    ">🏠</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
+  })
+}
+
+// Recenter component when listings change
+function AutoCenterMap({ center }) {
+  const map = useMap()
+  React.useEffect(() => {
+    if (center && !isNaN(center[0]) && !isNaN(center[1])) {
+      map.setView(center, map.getZoom())
+    }
+  }, [center, map])
+  return null
+}
+
+export default function MapView({ listings = [], hoveredId, onHover }) {
+  // Safely filter listings with valid numerical latitude & longitude
+  const validListings = listings.filter((item) => {
+    const lat = item?.lat ?? item?.latitude
+    const lng = item?.lng ?? item?.longitude
+    return typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng)
   })
 
-export default function MapView({ listings, activeId, onHover }) {
-  const navigate = useNavigate()
   return (
-    <MapContainer center={CAMPUS} zoom={14} className="h-full w-full" scrollWheelZoom>
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <CircleMarker center={CAMPUS} radius={10} pathOptions={{ color: '#dc2626', fillOpacity: 0.8 }}>
-        <Tooltip permanent direction="top">CSUEB</Tooltip>
-      </CircleMarker>
-      {listings.map((l) => (
-        <Marker
-          key={l.id}
-          position={[l.lat, l.lng]}
-          icon={pin(l.true_cost, l.id === activeId)}
-          title={`${l.name}, $${l.true_cost} per month`}
-          eventHandlers={{
-            click: () => navigate(`/listing/${l.id}`),
-            mouseover: () => onHover?.(l.id),
-          }}
+    <div className="relative w-full h-full rounded-2xl overflow-hidden border border-slate-200 shadow-inner">
+      <MapContainer
+        center={CAMPUS_CENTER}
+        zoom={14}
+        scrollWheelZoom={false}
+        className="w-full h-full min-h-[500px]"
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-      ))}
-    </MapContainer>
+
+        <AutoCenterMap center={CAMPUS_CENTER} />
+
+        {validListings.map((listing) => {
+          const lat = listing.lat ?? listing.latitude
+          const lng = listing.lng ?? listing.longitude
+          const isActive = String(listing.id) === String(hoveredId)
+
+          return (
+            <Marker
+              key={listing.id}
+              position={[lat, lng]}
+              icon={createCustomIcon(isActive)}
+              eventHandlers={{
+                mouseover: () => onHover && onHover(listing.id),
+                mouseout: () => onHover && onHover(null)
+              }}
+            >
+              <Popup className="custom-map-popup">
+                <div className="p-1 space-y-1.5 text-xs">
+                  <span className="font-extrabold text-slate-900 block leading-tight">{listing.name}</span>
+                  <p className="text-[11px] font-semibold text-emerald-600">{money(listing.true_cost)} / mo true cost</p>
+                  
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-100">
+                    <Stars value={listing.avg_rating || 0} />
+                    <span>{listing.distance_miles} mi away</span>
+                  </div>
+
+                  <Link
+                    to={`/listing/${listing.id}`}
+                    className="block w-full text-center rounded-lg bg-violet-600 py-1 mt-2 text-[10px] font-bold text-white hover:bg-violet-700 transition"
+                  >
+                    View Property →
+                  </Link>
+                </div>
+              </Popup>
+            </Marker>
+          )
+        })}
+      </MapContainer>
+    </div>
   )
 }
