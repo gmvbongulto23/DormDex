@@ -9,7 +9,7 @@ export default function App() {
   const [selectedCampus, setSelectedCampus] = useState('csueb')
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-gradient-to-br from-amber-50/60 via-teal-50/30 to-indigo-50/50 font-sans text-slate-800">
+    <div className="flex min-h-screen w-full flex-col bg-gradient-to-br from-amber-50/60 via-teal-50/30 to-indigo-50/50 font-sans text-slate-800">
       
       {/* Bright Header Bar */}
       <header className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 bg-white/90 px-6 py-3 shadow-sm backdrop-blur-md">
@@ -52,12 +52,12 @@ export default function App() {
               aria-label="Select Target College Campus"
             >
               <option value="csueb">CSU East Bay (Hayward Main)</option>
-              <option value="sjsu">San Jose State University</option>
-              <option value="ucb">UC Berkeley</option>
-              <option value="sfsu">San Francisco State</option>
-              <option value="scu">Santa Clara University</option>
-              <option value="ucd">UC Davis</option>
-              <option value="current">📍 Use My Location</option>
+              {/* Only CSUEB has data so far; other campuses are shown as coming soon */}
+              <option value="sjsu" disabled>San Jose State (coming soon)</option>
+              <option value="ucb" disabled>UC Berkeley (coming soon)</option>
+              <option value="sfsu" disabled>SF State (coming soon)</option>
+              <option value="scu" disabled>Santa Clara University (coming soon)</option>
+              <option value="ucd" disabled>UC Davis (coming soon)</option>
             </select>
           </div>
 
@@ -72,7 +72,7 @@ export default function App() {
       </header>
 
       {/* Main Container */}
-      <main className="min-h-0 flex-1">
+      <main className="flex-1">
         <Routes>
           <Route path="/" element={<HomePage selectedCampus={selectedCampus} />} />
           <Route path="/listing/:id" element={<ListingPage />} />
