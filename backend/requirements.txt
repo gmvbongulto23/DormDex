@@ -4,3 +4,4 @@ sqlalchemy==2.1.1
 pydantic[email]
 google-genai
 python-dotenv
+httpx
