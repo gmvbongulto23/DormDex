@@ -2,6 +2,7 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { money, Stars, SafetyBadge } from './ui'
 import { bestCommute } from './CommuteEstimate'
+import WalkTerrain from './WalkTerrain'
 
 export default function ListingCard({ listing, active, onHover }) {
   if (!listing) return null
@@ -60,6 +61,8 @@ export default function ListingCard({ listing, active, onHover }) {
         >
           View Details
         </Link>
+
+        <WalkTerrain listing={listing} />
       </div>
     </li>
   )
