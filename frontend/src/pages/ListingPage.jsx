@@ -4,14 +4,7 @@ import { getListing, getSummary } from '../api'
 import { money, Stars, SafetyBadge } from '../components/ui'
 import RentCalculator from '../components/RentCalculator'
 import LandlordRating from '../components/LandlordRating'
-import CommuteBadges from '../components/CommuteBadges'
-
-// Commute badge from real distance (not per-listing data yet, so it's an estimate)
-function commuteTag(miles) {
-  if (miles <= 0.5) return '🚶 Walkable to campus'
-  if (miles <= 1.5) return '🚌 Short shuttle or bus ride'
-  return '🚆 Bus / BART commute'
-}
+import CommuteEstimate, { bestCommute } from '../components/CommuteEstimate'
 
 export default function ListingPage() {
   const { id } = useParams()
@@ -108,9 +101,9 @@ export default function ListingPage() {
               {listing.address} • {listing.distance_miles} miles to campus
               {listing.landlord_name && <> • Landlord: <strong className="text-slate-700">{listing.landlord_name}</strong></>}
             </p>
-            <div className="pt-1">
-              <CommuteBadges tags={[commuteTag(listing.distance_miles)]} />
-            </div>
+            <p className="pt-1 text-sm font-semibold text-teal-800">
+              {bestCommute(listing.distance_miles).icon} ~{bestCommute(listing.distance_miles).minutes} min to campus by {bestCommute(listing.distance_miles).label.toLowerCase()}
+            </p>
           </div>
 
           <div className="rounded-2xl bg-emerald-50 border border-emerald-200/60 p-4 text-right">
@@ -136,6 +129,9 @@ export default function ListingPage() {
             {summary || 'Summarizing reviews…'}
           </p>
         </section>
+
+        {/* Commute to campus */}
+        <CommuteEstimate listing={listing} />
 
         {/* Two Column Grid: Calculator + Landlord Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
