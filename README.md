@@ -2,12 +2,11 @@
 
 **Know the place before you sign.**
 
-DormDex helps college students find affordable, trustworthy off-campus housing near Cal State East Bay (Hayward, CA). Students see the **true monthly cost** of each place (rent + the utilities other students actually paid), read **reviews verified by school email**, and get an **AI summary** of what past tenants said.
+DormDex helps college students find affordable, trustworthy off-campus housing near Cal State East Bay (Hayward, CA). Students see the **true monthly cost** of each place (rent + the utilities other students actually paid), read **reviews verified by school email**, get an **AI summary** of what past tenants said, see **how long the commute to campus takes**, and can **check a lease with AI** before signing.
 
 Built for **MESA U Hacks 3.0: Designing in Your Neighborhood**.
 
-- **Live site:** _add Vercel link_
-- **API:** _add Render link_ (interactive docs at `/docs`)
+DormDex runs locally (see [Run locally](#run-locally)); it is demoed live from a laptop.
 
 ---
 
@@ -27,9 +26,11 @@ We interviewed 8 students (commuters, first-time renters, grad students, roommat
 
 1. **Browse the map.** Open the site to see places near CSUEB. Each pin and card shows the **true monthly cost** (rent + median student-reported utilities).
 2. **Filter and sort.** Narrow by max monthly cost, minimum safety score and bedrooms. Sort by cheapest, safest, top rated or closest.
-3. **Open a listing.** See the cost breakdown, a roommate cost splitter, landlord / maintenance / safety ratings, an AI summary of all reviews, and every verified review with its date.
+3. **Open a listing.** See the cost breakdown, an AI summary of all reviews, **how long it takes to get to campus** (walk, bike, bus, drive, with Google Maps directions), a roommate cost splitter, landlord / maintenance / safety ratings, and every verified review with its date.
 4. **Write a review.** Click **+ Write a review**, enter your **school email** (`@csueastbay.edu` or a subdomain like `@horizon.csueastbay.edu`), your ratings, your actual monthly utilities, and your experience.
 5. **Verify.** Enter the 6-digit code sent to your email. Your review only counts after it's verified; then the true cost, ratings and AI summary update.
+
+6. **Check a lease.** Click **✨ Lease Checker**, paste your lease (or click **Try a sample lease**), and get red flags, every cost in the lease, and questions to ask the landlord, in plain language. Nothing you paste is saved.
 
 > **Demo mode:** when no email service is configured, the code is shown on screen in a yellow "Demo mode" box instead of being emailed, so the flow can be tested.
 
@@ -51,6 +52,8 @@ We interviewed 8 students (commuters, first-time renters, grad students, roommat
 | AI review summary | Gemini summarizes each listing's verified reviews in 2 sentences; cached so it's instant |
 | Landlord scorecard | Average landlord, maintenance and safety ratings from verified reviews |
 | Map + filters | Leaflet map around CSUEB; filter by cost, safety, bedrooms; 4 sort options |
+| Commute to campus | Estimated walk / bike / bus / drive times from each listing, a suggested option for students without a car, and Google Maps directions |
+| AI lease checker | Paste a lease: Gemini flags non-refundable fees, auto-renewal, roommate liability and more, lists every cost, and suggests questions for the landlord; falls back to a keyword check if AI is unavailable |
 | Roommate splitter | Splits the monthly cost across 1–5 roommates |
 
 ---
@@ -63,22 +66,22 @@ We interviewed 8 students (commuters, first-time renters, grad students, roommat
 | Backend | Python, FastAPI, SQLAlchemy, SQLite |
 | AI | Google Gemini API (`gemini-3.5-flash-lite`) via `google-genai` |
 | Email | Resend API (optional; demo mode without it) |
-| Hosting | Vercel (frontend), Render (backend) |
+| Maps | OpenStreetMap tiles, Google Maps directions links |
 
 ### How the pieces fit
 
 ```
-React app (Vercel)  ──HTTP/JSON──>  FastAPI (Render)  ──>  SQLite database
-                                         │
-                                         ├──> Gemini API   (review summaries, cached in summaries.json)
-                                         └──> Resend API   (verification codes; demo mode if unset)
+React app (localhost:5173)  ──HTTP/JSON──>  FastAPI (localhost:8000)  ──>  SQLite database
+                                                   │
+                                                   ├──> Gemini API   (review summaries cached in summaries.json; lease checker)
+                                                   └──> Resend API   (verification codes; demo mode if unset)
 ```
 
 ---
 
 ## Run locally
 
-**Requirements:** Python 3.11+, Node 18+
+**Requirements:** Python 3.11+, Node 18+, internet (for map tiles and Gemini). Run the backend and frontend in two terminal tabs.
 
 ### Backend (http://localhost:8000, API docs at http://localhost:8000/docs)
 
@@ -111,7 +114,7 @@ Without `VITE_API_URL`, the frontend runs on built-in mock data (a "Mock" badge 
 | `GEMINI_MODEL` | backend | No | Defaults to `gemini-3.5-flash-lite` |
 | `ALLOWED_EMAIL_DOMAINS` | backend | No | Comma-separated school domains; defaults to `csueastbay.edu` |
 | `RESEND_API_KEY` | backend | No | Sends real verification emails; without it, demo mode |
-| `ALLOWED_ORIGINS` | backend | Production | Frontend URL(s) allowed by CORS; defaults to `*` |
+| `ALLOWED_ORIGINS` | backend | No | Frontend URL(s) allowed by CORS; defaults to `*` (fine for local use) |
 | `VITE_API_URL` | frontend | Yes (for real data) | Backend URL |
 
 ### Seed data and AI summaries
@@ -130,12 +133,13 @@ Without `VITE_API_URL`, the frontend runs on built-in mock data (a "Mock" badge 
 | GET | `/listings/{id}/summary` | AI summary (generated and cached if missing) |
 | POST | `/listings/{id}/reviews` | Submits a review as **pending**; returns `review_id` (and `demo_code` in demo mode) |
 | POST | `/reviews/{review_id}/verify` | Body `{ "code": "123456" }`; verifies the review so it counts |
+| POST | `/lease/check` | Body `{ "text": "..." }` (50–20,000 characters); returns `source` (`ai` or `basic`), `summary`, `red_flags`, `costs`, `questions`. Nothing is saved |
 
 ---
 
 ## Data disclaimer
 
-All listings, landlords, addresses and seed reviews are **fictional demo data** generated by `backend/seed.py`, so we never misrepresent real landlords. Safety scores are **demo scores**, not real crime data. Reviews submitted through the site, the verification flow and the AI summaries are live.
+All listings, landlords, addresses and seed reviews are **fictional demo data** generated by `backend/seed.py`, so we never misrepresent real landlords. Safety scores are **demo scores**, not real crime data. Commute times are estimates based on distance (Google Maps links give real directions). The sample lease in the Lease Checker is fictional. Reviews submitted through the site, the verification flow, the AI summaries and the lease checker are live. The lease checker is not legal advice.
 
 ---
 
@@ -144,9 +148,9 @@ All listings, landlords, addresses and seed reviews are **fictional demo data** 
 We used AI tools during this hackathon and want to be transparent about how:
 
 - **Claude (Anthropic)** helped us plan the architecture, generate starter code for the FastAPI backend and React frontend, write the seed data script, debug errors, and draft documentation. We reviewed, ran, tested and modified all generated code, and we can explain every file.
-- **Google Gemini** is part of the product: it writes the 2-sentence review summary for each listing from the verified reviews.
+- **Google Gemini** is part of the product: it writes the 2-sentence review summary for each listing from the verified reviews, and it analyzes pasted leases in the Lease Checker.
 
-Our own work: the problem research and student interviews, product decisions, UI design, integrating and testing the frontend and backend, and deployment.
+Our own work: the problem research and student interviews, product decisions, UI design, and integrating and testing the frontend and backend.
 
 ---
 
@@ -157,7 +161,8 @@ Our own work: the problem research and student interviews, product decisions, UI
 - "Deposit returned?" and "Did rent match the listing?" review questions (requested in our interviews)
 - Reviews tagged by student type (e.g. international students), with consent
 - Expand to other CSU and UC campuses; partner with campus housing offices
-- Postgres for persistent production data; rate limiting on review submissions
+- Deploy online (Vercel + Render) with Postgres for persistent data; rate limiting on review submissions
+- Real commute times from a routing API instead of distance-based estimates
 
 ---
 
@@ -166,5 +171,6 @@ Our own work: the problem research and student interviews, product decisions, UI
 | Name | Role |
 | --- | --- |
 | Guia Mae Bongulto | Technical Lead: backend, AI, integration |
-| Ashna _(last name)_ | Designer / UX Lead: frontend, accessibility |
-| _(teammate)_ | _(role)_ |
+| Ashna Ranganathan | Designer / UX Lead: frontend, accessibility |
+
+Sample listing photos from [Unsplash](https://unsplash.com) and [Pexels](https://www.pexels.com), used under their free licenses.
