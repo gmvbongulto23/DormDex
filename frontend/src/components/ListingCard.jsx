@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { money, Stars, SafetyBadge } from './ui'
+import { bestCommute } from './CommuteEstimate'
 
 export default function ListingCard({ listing, active, onHover }) {
   if (!listing) return null
@@ -34,7 +35,9 @@ export default function ListingCard({ listing, active, onHover }) {
               </span>
             )}
             <h3 className="text-lg font-extrabold text-slate-900 leading-snug">{listing.name}</h3>
-            <p className="text-xs font-medium text-slate-500">{listing.distance_miles} miles from campus</p>
+            <p className="text-xs font-medium text-slate-500">
+              {listing.distance_miles} mi from campus · {bestCommute(listing.distance_miles).icon} ~{bestCommute(listing.distance_miles).minutes} min {bestCommute(listing.distance_miles).label.toLowerCase()}
+            </p>
           </div>
 
           <div className="text-right">
