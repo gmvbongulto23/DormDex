@@ -3,6 +3,7 @@ import { useState } from 'react'
 import HomePage from './pages/HomePage'
 import ListingPage from './pages/ListingPage'
 import SubmitPage from './pages/SubmitPage'
+import LeaseCheckPage from './pages/LeaseCheckPage'
 import { USING_MOCK } from './api'
 
 export default function App() {
@@ -39,7 +40,7 @@ export default function App() {
         </div>
 
         {/* Campus Selector & Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           
           {/* Campus Dropdown Select */}
           <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-1.5 shadow-inner">
@@ -61,6 +62,14 @@ export default function App() {
             </select>
           </div>
 
+          {/* Lease Checker Link */}
+          <Link
+            to="/lease"
+            className="rounded-xl border border-violet-200 bg-white px-4 py-2 text-xs font-bold text-violet-700 hover:bg-violet-50 transition"
+          >
+            ✨ Lease Checker
+          </Link>
+
           {/* Primary Action Button */}
           <Link
             to="/submit"
@@ -77,6 +86,7 @@ export default function App() {
           <Route path="/" element={<HomePage selectedCampus={selectedCampus} />} />
           <Route path="/listing/:id" element={<ListingPage />} />
           <Route path="/submit" element={<SubmitPage />} />
+          <Route path="/lease" element={<LeaseCheckPage />} />
         </Routes>
       </main>
 
