@@ -137,3 +137,9 @@ export async function verifyReview(reviewId, code) {
   delete pendingReviews[reviewId]
   return { review: newReview, listing: summary }
 }
+
+// AI lease checker: returns { source: 'ai' | 'basic', summary, red_flags, costs, questions }
+export async function checkLease(text) {
+  if (USING_MOCK) throw new Error('The lease checker needs the backend running (set VITE_API_URL).')
+  return request('/lease/check', { method: 'POST', body: JSON.stringify({ text }) })
+}

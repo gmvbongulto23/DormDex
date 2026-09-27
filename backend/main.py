@@ -13,6 +13,7 @@ from database import Base, engine, get_db
 from models import Listing, Review
 from ai import summarize_reviews
 import mailer
+from lease import check_lease
 
 Base.metadata.create_all(bind=engine)
 
@@ -51,6 +52,10 @@ class ReviewIn(BaseModel):
         if not any(domain == d or domain.endswith("." + d) for d in ALLOWED_DOMAINS):
             raise ValueError(f"Please use your school email ({', '.join(ALLOWED_DOMAINS)})")
         return v.lower()
+
+
+class LeaseIn(BaseModel):
+    text: str = Field(min_length=50, max_length=20000)
 
 
 class VerifyIn(BaseModel):
@@ -217,3 +222,9 @@ def verify_review(review_id: int, body: VerifyIn, db: Session = Depends(get_db))
     db.commit()
     db.refresh(r.listing)
     return {"review": to_review_out(r), "listing": listing_stats(r.listing)}
+
+
+@app.post("/lease/check")
+def lease_check(body: LeaseIn):
+    """AI lease checker: red flags, costs and questions to ask. Nothing is saved."""
+    return check_lease(body.text)
