@@ -143,17 +143,6 @@ All listings, landlords, addresses and seed reviews are **fictional demo data** 
 
 ---
 
-## AI assistance
-
-We used AI tools during this hackathon and want to be transparent about how:
-
-- **Claude (Anthropic)** helped us plan the architecture, generate starter code for the FastAPI backend and React frontend, write the seed data script, debug errors, and draft documentation. We reviewed, ran, tested and modified all generated code, and we can explain every file.
-- **Google Gemini** is part of the product: it writes the 2-sentence review summary for each listing from the verified reviews, and it analyzes pasted leases in the Lease Checker.
-
-Our own work: the problem research and student interviews, product decisions, UI design, and integrating and testing the frontend and backend.
-
----
-
 ## What's next
 
 - Send real verification emails (Resend with a verified domain)
