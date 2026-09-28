@@ -1,69 +1,65 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
-import { money, Stars, SafetyBadge } from './ui'
-import { bestCommute } from './CommuteEstimate'
-import WalkTerrain from './WalkTerrain'
+import { Link } from "react-router-dom";
+import { money } from "./ui";
 
 export default function ListingCard({ listing, active, onHover }) {
-  if (!listing) return null
-  const reviewCount = listing.review_count || 0
-
+  if (!listing) return null;
+  const reviews = listing.review_count || 0;
   return (
     <li
-      onMouseEnter={() => onHover && onHover(listing.id)}
-      onMouseLeave={() => onHover && onHover(null)}
-      className={`rounded-2xl border bg-white p-5 shadow-sm transition-all duration-200 list-none ${
-        active ? 'border-violet-500 ring-2 ring-violet-200' : 'border-slate-200/80 hover:border-slate-300'
-      }`}
+      className={"home-card " + (active ? "is-active" : "")}
+      onMouseEnter={() => onHover?.(listing.id)}
+      onMouseLeave={() => onHover?.(null)}
+      onFocus={() => onHover?.(listing.id)}
+      onBlur={() => onHover?.(null)}
     >
-      <div className="space-y-3">
-        <div className="relative">
+      <Link to={"/listing/" + listing.id} className="home-card-link">
+        <div className="home-photo">
           <img
-            src={`/photos/${listing.id}.jpg`}
-            alt={`Sample photo for ${listing.name}`}
-            className="h-36 w-full rounded-xl object-cover"
+            src={"/photos/" + listing.id + ".jpg"}
+            alt={"Sample photo for " + listing.name}
             loading="lazy"
           />
-          <span className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-            Sample photo
+          <span className="bedroom-badge">
+            {listing.bedrooms === 0 ? "Studio" : listing.bedrooms + " bed"}
+          </span>
+          <span className="photo-caption">Sample photo</span>
+          <span className="photo-arrow" aria-hidden="true">
+            ↗
           </span>
         </div>
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            {reviewCount > 0 && (
-              <span className="inline-block rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-800 mb-1.5">
-                ✓ {reviewCount} {reviewCount === 1 ? 'verified review' : 'verified reviews'}
-              </span>
-            )}
-            <h3 className="text-lg font-extrabold text-slate-900 leading-snug">{listing.name}</h3>
-            <p className="text-xs font-medium text-slate-500">
-              {listing.distance_miles} mi from campus · {bestCommute(listing.distance_miles).icon} ~{bestCommute(listing.distance_miles).minutes} min {bestCommute(listing.distance_miles).label.toLowerCase()}
-            </p>
+        <div className="home-card-body">
+          <div className="card-meta">
+            <span>{listing.distance_miles} mi to campus</span>
+            <span className="card-rating">
+              ★{" "}
+              {listing.avg_rating
+                ? Number(listing.avg_rating).toFixed(1)
+                : "New"}
+            </span>
           </div>
-
-          <div className="text-right">
-            <p className="text-xl font-black text-emerald-600">{money(listing.true_cost)}</p>
-            <p className="text-[10px] font-extrabold uppercase text-slate-400">/ mo total</p>
+          <h3>{listing.name}</h3>
+          <p className="card-address">{listing.address || "Hayward, CA"}</p>
+          <div className="card-cost">
+            <div>
+              <strong>{money(listing.true_cost)}</strong>
+              <span> / mo</span>
+            </div>
+            <span className="true-cost-label">
+              True cost <span aria-hidden="true">↗</span>
+            </span>
+          </div>
+          <div className="card-bottom">
+            <span>
+              {reviews > 0
+                ? "✓ " + reviews + " verified reviews"
+                : "Be the first to review"}
+            </span>
+            <span>
+              Safety {listing.safety_score}/10 <small>(demo)</small>
+            </span>
           </div>
         </div>
-
-        <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-          <SafetyBadge score={listing.safety_score} />
-          <div className="flex items-center gap-1">
-            <Stars value={listing.avg_rating || 0} />
-            <span className="font-bold text-slate-600">({reviewCount})</span>
-          </div>
-        </div>
-
-        <Link
-          to={`/listing/${listing.id}`}
-          className="block w-full text-center rounded-xl bg-slate-100 py-2 text-xs font-bold text-slate-700 hover:bg-violet-600 hover:text-white transition"
-        >
-          View Details
-        </Link>
-
-        <WalkTerrain listing={listing} />
-      </div>
+      </Link>
     </li>
-  )
+  );
 }
