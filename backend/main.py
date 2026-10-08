@@ -14,10 +14,14 @@ from models import Listing, Review
 from ai import summarize_reviews
 import mailer
 from lease import check_lease
+from ai_tags import router as ai_tags_router
+from lease_compare import router as lease_compare_router
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="DormDex API", description="Know the place before you sign.")
+app.include_router(ai_tags_router)
+app.include_router(lease_compare_router)
 
 # Comma-separated, e.g. "csueastbay.edu,sjsu.edu". Subdomains like horizon.csueastbay.edu also pass.
 ALLOWED_DOMAINS = [d.strip().lower() for d in os.getenv("ALLOWED_EMAIL_DOMAINS", "csueastbay.edu").split(",") if d.strip()]
