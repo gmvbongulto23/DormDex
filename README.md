@@ -163,6 +163,6 @@ All listings, landlords, addresses and seed reviews are **fictional demo data** 
 | Guia Mae Bongulto | Technical Lead: backend, AI, integration |
 | Ashna Ranganathan | Designer / UX Lead: frontend, accessibility |
 | Jhanvi Murugan | Backend / Database & AI Integration: SQLite database |
-| Aneesh Pradhan | Contributor |
+| Aneesh Pradhan | Contributor: revamped the frontend design |
 
 Sample listing photos from [Unsplash](https://unsplash.com) and [Pexels](https://www.pexels.com), used under their free licenses.
