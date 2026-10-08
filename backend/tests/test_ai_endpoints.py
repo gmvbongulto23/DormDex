@@ -93,3 +93,60 @@ def test_lease_compare_uses_basic_check_without_gemini(client):
 
 def test_mailer_is_in_demo_mode():
     assert mailer.DEMO_MODE is True
+
+
+def test_existing_endpoints_return_success_in_fallback_mode(client, db_session):
+    from models import Listing
+
+    listing = Listing(
+        name="Existing API Test House",
+        address="2 Campus Way",
+        lat=37.65,
+        lng=-122.05,
+        rent=1600,
+        bedrooms=1,
+        landlord_name="Test Landlord",
+        safety_score=7,
+        distance_miles=1,
+    )
+    db_session.add(listing)
+    db_session.commit()
+
+    health_response = client.get("/")
+    listings_response = client.get("/listings")
+    listing_response = client.get(f"/listings/{listing.id}")
+    summary_response = client.get(f"/listings/{listing.id}/summary")
+    lease_response = client.post("/lease/check", json={
+        "text": "The tenant pays a non-refundable cleaning fee of $500. Utilities are not included in rent.",
+    })
+
+    assert health_response.status_code == 200
+    assert health_response.json()["email_mode"] == "demo"
+    assert listings_response.status_code == 200
+    assert any(result["id"] == listing.id for result in listings_response.json())
+    assert listing_response.status_code == 200
+    assert listing_response.json()["id"] == listing.id
+    assert summary_response.status_code == 200
+    assert summary_response.json()["listing_id"] == listing.id
+    assert lease_response.status_code == 200
+    assert lease_response.json()["source"] == "basic"
+
+    review_response = client.post(f"/listings/{listing.id}/reviews", json={
+        "email": "student@csueastbay.edu",
+        "overall_rating": 4,
+        "landlord_rating": 4,
+        "maintenance_rating": 4,
+        "safety_rating": 4,
+        "monthly_utilities": 120,
+        "text": "The apartment was quiet and maintenance responded quickly.",
+        "deposit_returned": True,
+    })
+    assert review_response.status_code == 201
+    assert review_response.json()["email_mode"] == "demo"
+
+    verify_response = client.post(
+        f"/reviews/{review_response.json()['review_id']}/verify",
+        json={"code": review_response.json()["demo_code"]},
+    )
+    assert verify_response.status_code == 200
+    assert verify_response.json()["review"]["deposit_returned"] is True
