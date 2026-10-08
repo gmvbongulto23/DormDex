@@ -101,6 +101,51 @@ export async function getSummary(id) {
   return { listing_id: id, ai_summary: mockDetails[id]?.ai_summary || 'No reviews yet. Be the first to share your experience.' }
 }
 
+export async function getListingTags(id) {
+  if (!USING_MOCK) return request(`/listings/${id}/tags`)
+  const detail = mockDetails[id]
+  if (!detail) throw new Error('Listing not found')
+
+  const reviews = (detail.reviews || []).filter((review) => review.verified)
+  const text = reviews.map((review) => review.text.toLowerCase()).join(' ')
+  const rules = [
+    ['Deposit returned', 'deposit returned in full'],
+    ['Deposit withheld', 'kept part of the deposit'],
+    ['Quiet building', 'quiet building'],
+    ['Walkable location', 'walkable to the shuttle'],
+    ['Fast maintenance', 'fixed our sink fast'],
+    ['Slow maintenance', 'maintenance is slow'],
+    ['Thin walls', 'walls are thin'],
+    ['High winter utilities', 'bill spikes in dec-feb'],
+    ['Limited street parking', 'street parking only'],
+    ['Mold concerns', 'mold in the bathroom'],
+    ['Safety concerns', 'package theft'],
+    ['Unresponsive landlord', 'hard to reach the landlord'],
+    ['Feels safe', 'i feel safe'],
+  ]
+  const tags = rules.filter(([, phrase]) => text.includes(phrase)).map(([tag]) => tag).slice(0, 5)
+  const dimensions = [
+    ['overall_rating', 'resident feedback'],
+    ['landlord_rating', 'landlord'],
+    ['maintenance_rating', 'maintenance'],
+    ['safety_rating', 'safety'],
+  ]
+
+  for (const [field, label] of dimensions) {
+    if (tags.length >= 5 || !reviews.length) break
+    const average = reviews.reduce((sum, review) => sum + review[field], 0) / reviews.length
+    const adjective = average >= 4
+      ? (field === 'overall_rating' ? 'Highly rated' : 'Strong')
+      : average <= 2.5
+        ? (field === 'overall_rating' ? 'Low-rated' : 'Needs attention')
+        : 'Mixed'
+    const tag = `${adjective} ${label}`
+    if (!tags.includes(tag)) tags.push(tag)
+  }
+
+  return { listing_id: Number(id), tags, source: 'basic' }
+}
+
 // Step 1: returns { review_id, status: 'pending', email_mode, demo_code? }
 export async function postReview(listingId, review) {
   if (!USING_MOCK) {
