@@ -43,7 +43,8 @@ class Review(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Email verification: a review only counts after the student enters the code we emailed.
-    verified = Column(Boolean, nullable=False, default=False)
+    verified = Column(Boolean, nullable=False, default=False, index=True)
+    deposit_returned = Column(Boolean, nullable=True)
     code_hash = Column(String, nullable=True)
     code_expires_at = Column(DateTime, nullable=True)
     verify_attempts = Column(Integer, nullable=False, default=0)

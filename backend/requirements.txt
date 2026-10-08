@@ -1,6 +1,7 @@
 fastapi==0.141.1
 uvicorn[standard]
 sqlalchemy==2.1.1
+alembic
 pydantic[email]
 google-genai
 python-dotenv

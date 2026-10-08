@@ -62,6 +62,7 @@ def make_review(listing_id, quality, when):
         maintenance_rating=jitter(), safety_rating=jitter(),
         monthly_utilities=random.randint(90, 260),
         text=f"{random.choice(pool)} {random.choice(other)}",
+        deposit_returned=random.choice([True, False, None]),
         created_at=when,
         verified=True,  # seed reviews count as verified
     )

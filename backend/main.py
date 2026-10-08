@@ -44,6 +44,7 @@ class ReviewIn(BaseModel):
     safety_rating: int = Field(ge=1, le=5)
     monthly_utilities: int = Field(ge=0, le=2000)
     text: str = Field(min_length=10, max_length=1000)
+    deposit_returned: Optional[bool] = None
 
     @field_validator("email")
     @classmethod
@@ -72,6 +73,7 @@ class ReviewOut(BaseModel):
     text: str
     created_at: datetime
     verified: bool
+    deposit_returned: Optional[bool] = None
 
 
 # ---------- Helpers ----------
@@ -113,7 +115,7 @@ def to_review_out(r: Review) -> dict:
         id=r.id, overall_rating=r.overall_rating, landlord_rating=r.landlord_rating,
         maintenance_rating=r.maintenance_rating, safety_rating=r.safety_rating,
         monthly_utilities=r.monthly_utilities, text=r.text, created_at=r.created_at,
-        verified=r.verified,
+        verified=r.verified, deposit_returned=r.deposit_returned,
     ).model_dump()
 
 
