@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Link } from "react-router-dom";
 import { money, Stars } from "./ui";
+import MapExtras, { PopupTags } from "./MapExtras";
 import "leaflet/dist/leaflet.css";
 
 // Fix Leaflet default icon path issues in React/Vite builds
@@ -53,6 +54,8 @@ function AutoCenterMap({ center }) {
 }
 
 export default function MapView({ listings = [], hoveredId, onHover }) {
+  const [openPopupId, setOpenPopupId] = React.useState(null);
+
   // Safely filter listings with valid numerical latitude & longitude
   const validListings = listings.filter((item) => {
     const lat = item?.lat ?? item?.latitude;
@@ -79,6 +82,7 @@ export default function MapView({ listings = [], hoveredId, onHover }) {
         />
 
         <AutoCenterMap center={CAMPUS_CENTER} />
+        <MapExtras listings={validListings} />
 
         {validListings.map((listing) => {
           const lat = listing.lat ?? listing.latitude;
@@ -95,7 +99,13 @@ export default function MapView({ listings = [], hoveredId, onHover }) {
                 mouseout: () => onHover && onHover(null),
               }}
             >
-              <Popup className="custom-map-popup">
+              <Popup
+                className="custom-map-popup"
+                eventHandlers={{
+                  add: () => setOpenPopupId(listing.id),
+                  remove: () => setOpenPopupId((current) => current === listing.id ? null : current),
+                }}
+              >
                 <div className="p-1 space-y-1.5 text-xs">
                   <span className="font-extrabold text-slate-900 block leading-tight">
                     {listing.name}
@@ -108,6 +118,8 @@ export default function MapView({ listings = [], hoveredId, onHover }) {
                     <Stars value={listing.avg_rating || 0} />
                     <span>{listing.distance_miles} mi away</span>
                   </div>
+
+                  <PopupTags listingId={listing.id} isOpen={openPopupId === listing.id} />
 
                   <Link
                     to={`/listing/${listing.id}`}
